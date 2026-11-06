@@ -1,0 +1,80 @@
+#!/usr/bin/make -f
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (c) 2026 The Blueberry Pie OS Authors
+
+include /usr/share/pietoolchain/rules.mk
+
+S       := $(SRCROOT)/libpcap
+DERIVED := $(OBJ)/derived
+SOURCES := bpf_dump.c bpf_filter.c bpf_image.c etherent.c fad-getad.c fmtutils.c gencode.c \
+	nametoaddr.c optimize.c pcap-bpf.c pcap-stubs.c pcap-common.c pcap-darwin.c pcap-util.c \
+	pcap.c pcapng.c savefile.c sf-pcap.c sf-pcapng.c
+OBJS    := $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(OBJ)/grammar.o $(OBJ)/scanner.o
+DYLIB   := $(OBJ)/libpcap.A.dylib
+FLAGS   := $(BASE_CFLAGS) -DHAVE_CONFIG_H -I$(CURDIR)/debian -I$(S) -I$(DERIVED) \
+	-isystem $(SDK)/System/Library/Frameworks/System.framework/PrivateHeaders
+MAN     := $(ROOT)/usr/share/man
+MAN3    := $(filter-out $(S)/pcap_set_protocol_linux.3pcap,$(wildcard $(S)/*.3pcap))
+MANSED  := s,@MAN_MISC_INFO@,7,g;s,@MAN_FILE_FORMATS@,5,g
+
+all: $(DYLIB)
+
+$(DERIVED)/grammar.c: $(S)/grammar.y
+	@mkdir -p $(DERIVED)
+	bison -p pcap_ -d -o $@ $<
+$(DERIVED)/grammar.h: $(DERIVED)/grammar.c
+$(DERIVED)/scanner.c: $(S)/scanner.l $(DERIVED)/grammar.h
+	flex -P pcap_ --header-file=$(DERIVED)/scanner.h -o $@ $<
+$(DERIVED)/scanner.h: $(DERIVED)/scanner.c
+
+$(OBJ)/%.o: $(S)/%.c $(DERIVED)/scanner.h $(DERIVED)/grammar.h
+	@mkdir -p $(dir $@)
+	$(CC) $(FLAGS) -c $< -o $@
+$(OBJ)/%.o: $(CURDIR)/debian/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(FLAGS) -c $< -o $@
+$(OBJ)/%.o: $(DERIVED)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(FLAGS) -c $< -o $@
+
+NOTICE := $(OBJ)/apsl-notice
+$(NOTICE):
+	@mkdir -p $(OBJ)
+	printf '%s\n' 'This program contains Covered Code under the Apple Public Source License 2.0.' \
+		'Its Source Code is available under that License from https://github.com/blueberrypieos/libpcap.' > $@
+
+$(DYLIB): $(OBJS) $(NOTICE)
+	$(CC) $(BASE_LDFLAGS) -dynamiclib -install_name /usr/lib/libpcap.A.dylib \
+		-compatibility_version 1 -current_version 1 -Wl,-sectcreate,__TEXT,__source,$(NOTICE) $(OBJS) -o $@
+
+install: $(DYLIB)
+	install -d $(ROOT)/usr/lib $(ROOT)/usr/include/pcap $(MAN)/man3 $(MAN)/man5 $(MAN)/man7
+	install -m 755 $(DYLIB) $(ROOT)/usr/lib/
+	ln -sf libpcap.A.dylib $(ROOT)/usr/lib/libpcap.dylib
+	install -m 644 $(S)/pcap.h $(S)/pcap-bpf.h $(S)/pcap-namedb.h $(ROOT)/usr/include/
+	install -m 644 $(S)/pcap/*.h $(ROOT)/usr/include/pcap/
+	install -D -m 644 $(S)/pcap-util.h $(ROOT)/System/Library/Frameworks/System.framework/Versions/B/PrivateHeaders/pcap/pcap-util.h
+	install -m 644 $(MAN3) $(MAN)/man3/
+	sed '$(MANSED)' $(S)/pcap-savefile.manfile.in > $(MAN)/man5/pcap-savefile.5
+	sed '$(MANSED)' $(S)/pcap-filter.manmisc.in > $(MAN)/man7/pcap-filter.7
+	sed '$(MANSED)' $(S)/pcap-linktype.manmisc.in > $(MAN)/man7/pcap-linktype.7
+	sed '$(MANSED)' $(S)/pcap-tstamp.manmisc.in > $(MAN)/man7/pcap-tstamp.7
+	ln -sf pcap_datalink_val_to_name.3pcap $(MAN)/man3/pcap_datalink_val_to_description.3pcap
+	ln -sf pcap_datalink_val_to_name.3pcap $(MAN)/man3/pcap_datalink_val_to_description_or_dlt.3pcap
+	ln -sf pcap_findalldevs.3pcap $(MAN)/man3/pcap_freealldevs.3pcap
+	ln -sf pcap_geterr.3pcap $(MAN)/man3/pcap_perror.3pcap
+	ln -sf pcap_inject.3pcap $(MAN)/man3/pcap_sendpacket.3pcap
+	ln -sf pcap_list_datalinks.3pcap $(MAN)/man3/pcap_free_datalinks.3pcap
+	ln -sf pcap_list_tstamp_types.3pcap $(MAN)/man3/pcap_free_tstamp_types.3pcap
+	ln -sf pcap_loop.3pcap $(MAN)/man3/pcap_dispatch.3pcap
+	ln -sf pcap_major_version.3pcap $(MAN)/man3/pcap_minor_version.3pcap
+	ln -sf pcap_dump_open.3pcap $(MAN)/man3/pcap_dump_fopen.3pcap
+	ln -sf pcap_next_ex.3pcap $(MAN)/man3/pcap_next.3pcap
+	ln -sf pcap_open_offline.3pcap $(MAN)/man3/pcap_fopen_offline.3pcap
+	ln -sf pcap_open_dead.3pcap $(MAN)/man3/pcap_open_dead_with_tstamp_precision.3pcap
+	ln -sf pcap_open_offline.3pcap $(MAN)/man3/pcap_open_offline_with_tstamp_precision.3pcap
+	ln -sf pcap_open_offline.3pcap $(MAN)/man3/pcap_fopen_offline_with_tstamp_precision.3pcap
+	ln -sf pcap_tstamp_type_val_to_name.3pcap $(MAN)/man3/pcap_tstamp_type_val_to_description.3pcap
+	ln -sf pcap_setnonblock.3pcap $(MAN)/man3/pcap_getnonblock.3pcap
+
+.PHONY: all install

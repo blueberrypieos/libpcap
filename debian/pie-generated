@@ -1,0 +1,4 @@
+debian/build/obj/derived/grammar.c
+debian/build/obj/derived/grammar.h
+debian/build/obj/derived/scanner.c
+debian/build/obj/derived/scanner.h

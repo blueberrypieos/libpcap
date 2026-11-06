@@ -1,0 +1,28 @@
+Source: libpcap
+Section: libs
+Priority: optional
+Maintainer: Maxwell <maxwell@blueberrypieos.com>
+Build-Depends: pietoolchain (>= 0.1.0), bison, flex
+Standards-Version: 4.7.3
+Homepage: https://github.com/apple-oss-distributions/libpcap
+Vcs-Git: https://github.com/blueberrypieos/libpcap.git -b blueberry-pie-os/latest
+Vcs-Browser: https://github.com/blueberrypieos/libpcap
+Rules-Requires-Root: no
+
+Package: libpcap
+Architecture: darwin-arm64
+Priority: standard
+Section: libs
+Depends: libsystem
+Description: packet capture library
+ libpcap provides packet capture, BPF filter compilation and offline
+ capture-file reading and writing, including pcapng support.
+
+Package: libpcap-dev
+Architecture: darwin-arm64
+Priority: optional
+Section: libdevel
+Depends: libpcap (= ${binary:Version})
+Description: packet capture library: development files
+ Public libpcap headers and the private pcap-util.h for building
+ packet capture tools.

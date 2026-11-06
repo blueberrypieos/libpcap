@@ -1,0 +1,4 @@
+superfluous-file-pattern debian/build/obj/derived/grammar.c [debian/copyright:*]
+superfluous-file-pattern debian/build/obj/derived/grammar.h [debian/copyright:*]
+superfluous-file-pattern debian/build/obj/derived/scanner.c [debian/copyright:*]
+superfluous-file-pattern debian/build/obj/derived/scanner.h [debian/copyright:*]
